@@ -21,20 +21,22 @@ public:
 Sentence::Sentence(string& str) : Length(0)
 {
 
-  string::iterator start = str.begin();
-  for (string::iterator i = str.begin(); i != str.end(); i++)
+  auto start = str.begin();
+  for (auto i = str.begin(); i != str.end(); i++)
   {
     if (*i == ' ')
     {
       string temp("", (int)(i - start));
       copy(start, i, temp.begin());
-      *this += temp;
+      Words.push_back(temp);
+      Length += temp.length();
       start = i + 1;
     }
   }
   string temp("", (int)(str.end() - start));
   copy(start, str.end(), temp.begin());
-  *this += temp;
+  Words.push_back(temp);
+  Length += temp.length();
 }
 
 Sentence& Sentence::operator+=(string& str)
