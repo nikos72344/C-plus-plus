@@ -21,7 +21,7 @@ public:
 Sentence::Sentence(string& str) : Length(0)
 {
   string temp;
-  for (auto& i: str)
+  for (auto i: str)
   {
     if (i != ' ')
       temp += i;
