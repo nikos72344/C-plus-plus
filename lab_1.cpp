@@ -20,21 +20,18 @@ public:
 
 Sentence::Sentence(string& str) : Length(0)
 {
-
-  auto start = str.begin();
-  for (auto i = str.begin(); i != str.end(); i++)
+  string temp;
+  for (auto& i: str)
   {
-    if (*i == ' ')
+    if (i != ' ')
+      temp += i;
+    else
     {
-      string temp("", (int)(i - start));
-      copy(start, i, temp.begin());
       Words.push_back(temp);
       Length += temp.length();
-      start = i + 1;
+      temp.clear();
     }
   }
-  string temp("", (int)(str.end() - start));
-  copy(start, str.end(), temp.begin());
   Words.push_back(temp);
   Length += temp.length();
 }
