@@ -32,15 +32,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
   if (!RegisterClass(&wc))
   {
-    MessageBox(NULL, (LPCWSTR)L"Не могу зарегистрировать класс окна!", (LPCWSTR)L"Ошибка", MB_OK);
+    MessageBox(NULL, (LPCWSTR)L"ГЌГҐ Г¬Г®ГЈГі Г§Г Г°ГҐГЈГЁГ±ГІГ°ГЁГ°Г®ГўГ ГІГј ГЄГ«Г Г±Г± Г®ГЄГ­Г !", (LPCWSTR)L"ГЋГёГЁГЎГЄГ ", MB_OK);
     return 1;
   }
 
-  hWnd = CreateWindow((LPCWSTR)szClassName, L"E - удлиннить, Q - уменьшить", WS_OVERLAPPEDWINDOW, 50, 50, screen_size, screen_size, (HWND)NULL, (HMENU)NULL, (HINSTANCE)hInstance, NULL);
+  hWnd = CreateWindow((LPCWSTR)szClassName, L"E - ГіГ¤Г«ГЁГ­Г­ГЁГІГј, Q - ГіГ¬ГҐГ­ГјГёГЁГІГј", WS_OVERLAPPEDWINDOW, 50, 50, screen_size, screen_size, (HWND)NULL, (HMENU)NULL, (HINSTANCE)hInstance, NULL);
 
   if (!hWnd)
   {
-    MessageBox(NULL, (LPCWSTR)L"Не удается создать главное окно!", (LPCWSTR)L"Ошибка", MB_OK);
+    MessageBox(NULL, (LPCWSTR)L"ГЌГҐ ГіГ¤Г ГҐГІГ±Гї Г±Г®Г§Г¤Г ГІГј ГЈГ«Г ГўГ­Г®ГҐ Г®ГЄГ­Г®!", (LPCWSTR)L"ГЋГёГЁГЎГЄГ ", MB_OK);
     return 2;
   }
 
@@ -65,10 +65,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT messg, WPARAM wParam, LPARAM lParam)
   {
   case WM_CREATE:
     SetTimer(hWnd, TIMER_SEC, INTERVAL, NULL);
+      
   case WM_TIMER:
     act.DataUpdate();
     InvalidateRect(hWnd, NULL, FALSE);
     break;
+      
   case WM_KEYDOWN:
     act.KeyRequest(int(wParam));
     InvalidateRect(hWnd, NULL, true);
