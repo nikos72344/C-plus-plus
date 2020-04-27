@@ -2,8 +2,6 @@
 #include <cmath>
 #include "lab_2.h"
 
-const double PI = 3.1415926535897932384626433832795;
-
 int Win_width, Win_height;
 
 const int MARGIN = 10;
@@ -13,100 +11,122 @@ void SetWindowSize(int _Width, int _Height) {
   Win_height = _Height;
 }
 
-Object::point Object::Transform(point pos)
+void Transform(double* x, double* y)
 {
-  point Tpoint;
-  Tpoint.x = MARGIN + (1.0 / 2) * (pos.x + 1) * (Win_width - 2 * MARGIN);
-  Tpoint.y = MARGIN + (-1.0 / 2) * (pos.y - 1) * (Win_height - 2 * MARGIN);
-  return Tpoint;
+  *x = MARGIN + (1.0 / 2) * ((*x) + 1) * (Win_width - 2 * MARGIN);
+  *y = MARGIN + (-1.0 / 2) * ((*y) - 1) * (Win_height - 2 * MARGIN);
 }
 
-void Object::Gain(void)
+void Object::DotsCount(double x[], double y[], int i)
 {
-  for (unsigned int i = 0; i < length.size(); i++)
-    if (length[i] <= 10 * dot_len)
-      length[i] += dot_len * (1 - i * 0.01);
+  x[0] = -trace.length[i] / 2 * cos(trace.angle[i]) - width / 2 * sin(trace.angle[i]) + trace.x[i];
+  y[0] = -trace.length[i] / 2 * sin(trace.angle[i]) + width / 2 * cos(trace.angle[i]) + trace.y[i];
+  x[1] = -trace.length[i] / 2 * cos(trace.angle[i]) + width / 2 * sin(trace.angle[i]) + trace.x[i];
+  y[1] = -trace.length[i] / 2 * sin(trace.angle[i]) - width / 2 * cos(trace.angle[i]) + trace.y[i];
+  x[2] = trace.length[i] / 2 * cos(trace.angle[i]) - width / 2 * sin(trace.angle[i]) + trace.x[i];
+  y[2] = trace.length[i] / 2 * sin(trace.angle[i]) + width / 2 * cos(trace.angle[i]) + trace.y[i];
+  x[3] = trace.length[i] / 2 * cos(trace.angle[i]) + width / 2 * sin(trace.angle[i]) + trace.x[i];
+  y[3] = trace.length[i] / 2 * sin(trace.angle[i]) - width / 2 * cos(trace.angle[i]) + trace.y[i];
+  x[4] = (trace.length[i] / 2 + dot_len) * cos(trace.angle[i]) + trace.x[i];
+  y[4] = (trace.length[i] / 2 + dot_len) * sin(trace.angle[i]) + trace.y[i];
+  for (int j = 0; j < 5; j++)
+    Transform(&x[j], &y[j]);
 }
 
-void Object::Shrink(void)
+void operator<<(HDC& hdc, Object& obj)
 {
-  for (unsigned int i = 0; i < length.size(); i++)
-    if (length[i] > dot_len)
-      length[i] -= dot_len * (1 - i * 0.01);
+  for (unsigned int i = 0; i < obj.trace.angle.size(); i++)
+  {
+    double x[5], y[5];
+    obj.DotsCount(x, y, i);
+    MoveToEx(hdc, (int)x[0], (int)y[0], NULL);
+    LineTo(hdc, (int)x[1], (int)y[1]);
+    MoveToEx(hdc, (int)x[0], (int)y[0], NULL);
+    LineTo(hdc, (int)x[2], (int)y[2]);
+    MoveToEx(hdc, (int)x[3], (int)y[3], NULL);
+    LineTo(hdc, (int)x[1], (int)y[1]);
+    MoveToEx(hdc, (int)x[3], (int)y[3], NULL);
+    LineTo(hdc, (int)x[4], (int)y[4]);
+    MoveToEx(hdc, (int)x[2], (int)y[2], NULL);
+    LineTo(hdc, (int)x[4], (int)y[4]);
+  }
 }
 
-void Object::DataUpdate(void)
+Object& Object::operator+=(double speed_unit)
 {
-  position[0].x += speed * cos(curr_angle[0]);
-  position[0].y += speed * sin(curr_angle[0]);
-  if (position[0].x >= 1 || position[0].y >= 1 || position[0].x <= -1 || position[0].y <= -1)
-    curr_angle[0] += PI;
-  if (position[0].x < -1)
-    position[0].x = -1;
-  if (position[0].y < -1)
-    position[0].y = -1;
-  if (position[0].x > 1)
-    position[0].x = 1;
-  if (position[0].y > 1)
-    position[0].y = 1;
+  speed += 2 * speed_unit;
+  return *this;
+}
+
+Object& Object::operator-=(double speed_unit)
+{
+  speed -= 4 * speed_unit;
+  return *this;
+}
+
+Object& Object::operator<<(double angle)
+{
+  for (unsigned int i = 0; i < trace.angle.size(); i++)
+    trace.angle[i] += angle / (i + 1);
+  return *this;
+}
+
+Object& Object::operator>>(double angle)
+{
+  for (unsigned int i = 0; i < trace.angle.size(); i++)
+    trace.angle[i] -= angle / (i + 1);
+  return *this;
+}
+
+Object& Object::operator++(void)
+{
+  for (unsigned int i = 0; i < trace.length.size(); i++)
+    if (trace.length[i] <= 10 * dot_len)
+      trace.length[i] += dot_len * (1 - i * 0.01);
+  return *this;
+}
+
+Object& Object::operator--(void)
+{
+  for (unsigned int i = 0; i < trace.length.size(); i++)
+    if (trace.length[i] > dot_len)
+      trace.length[i] -= dot_len * (1 - i * 0.01);
+  return *this;
+}
+
+void Object::IsHit(void)
+{
+  if (trace.x[0] >= 1 || trace.y[0] >= 1 || trace.x[0] <= -1 || trace.y[0] <= -1)
+    trace.angle[0] += PI;
+  if (trace.x[0] < -1)
+    trace.x[0] = -1;
+  if (trace.y[0] < -1)
+    trace.y[0] = -1;
+  if (trace.x[0] > 1)
+    trace.x[0] = 1;
+  if (trace.y[0] > 1)
+    trace.y[0] = 1;
+}
+
+void Object::Demping(void)
+{
   if (speed > 0)
     speed -= speed_unit;
   if (speed < 0)
     speed += speed_unit;
-  for (unsigned int i = position.size() - 1; i > 0; i--)
-  {
-    position[i] = position[i - 1];
-    length[i] = length[i - 1];
-    curr_angle[i] = curr_angle[i - 1];
-  }
 }
 
-void Object::Draw(HDC hdc)
-{ 
-  for (unsigned int i = 0; i < position.size(); i++)
-  {
-    point pos[5];
-    pos[0].x = -length[i] / 2 * cos(curr_angle[i]) - width / 2 * sin(curr_angle[i]) + position[i].x;
-    pos[0].y = -length[i] / 2 * sin(curr_angle[i]) + width / 2 * cos(curr_angle[i]) + position[i].y;
-    pos[1].x = -length[i] / 2 * cos(curr_angle[i]) + width / 2 * sin(curr_angle[i]) + position[i].x;
-    pos[1].y = -length[i] / 2 * sin(curr_angle[i]) - width / 2 * cos(curr_angle[i]) + position[i].y;
-    pos[2].x = length[i] / 2 * cos(curr_angle[i]) - width / 2 * sin(curr_angle[i]) + position[i].x;
-    pos[2].y = length[i] / 2 * sin(curr_angle[i]) + width / 2 * cos(curr_angle[i]) + position[i].y;
-    pos[3].x = length[i] / 2 * cos(curr_angle[i]) + width / 2 * sin(curr_angle[i]) + position[i].x;
-    pos[3].y = length[i] / 2 * sin(curr_angle[i]) - width / 2 * cos(curr_angle[i]) + position[i].y;
-    pos[4].x = (length[i] / 2 + dot_len) * cos(curr_angle[i]) + position[i].x;
-    pos[4].y = (length[i] / 2 + dot_len) * sin(curr_angle[i]) + position[i].y;
-    for (int j = 0; j < 5; j++)
-    {
-      pos[j] = Transform(pos[j]);
-    }
-    MoveToEx(hdc, (int)pos[0].x, (int)pos[0].y, NULL);
-    LineTo(hdc, (int)pos[1].x, (int)pos[1].y);
-    MoveToEx(hdc, (int)pos[0].x, (int)pos[0].y, NULL);
-    LineTo(hdc, (int)pos[2].x, (int)pos[2].y);
-    MoveToEx(hdc, (int)pos[3].x, (int)pos[3].y, NULL);
-    LineTo(hdc, (int)pos[1].x, (int)pos[1].y);
-    MoveToEx(hdc, (int)pos[3].x, (int)pos[3].y, NULL);
-    //LineTo(hdc, (int)pos[2].x, (int)pos[2].y);
-    LineTo(hdc, (int)pos[4].x, (int)pos[4].y);
-    MoveToEx(hdc, (int)pos[2].x, (int)pos[2].y, NULL);
-    LineTo(hdc, (int)pos[4].x, (int)pos[4].y);
-  }
-}
-
-void Object::KeyRequest(int Key)
+void Object::DataUpdate(void)
 {
-  switch (Key)
+  trace.x[0] += speed * cos(trace.angle[0]);
+  trace.y[0] += speed * sin(trace.angle[0]);
+  IsHit();
+  Demping();
+  for (unsigned int i = trace.angle.size() - 1; i > 0; i--)
   {
-  case 'W':
-  case VK_UP: speed += 2 * speed_unit; break;
-  case 'S':
-  case VK_DOWN: speed -= 4 * speed_unit; break;
-  case 'A':
-  case VK_LEFT: for (unsigned int i = 0; i < curr_angle.size(); i++) { curr_angle[i] += PI / 18 / (i + 1); } break;
-  case 'D':
-  case VK_RIGHT: for (unsigned int i = 0; i < curr_angle.size(); i++) { curr_angle[i] -= PI / 18 / (i + 1); } break;
-  case 'E': Gain(); break;
-  case 'Q': Shrink(); break;
+    trace.x[i] = trace.x[i - 1];
+    trace.y[i] = trace.y[i - 1];
+    trace.length[i] = trace.length[i - 1];
+    trace.angle[i] = trace.angle[i - 1];
   }
 }
