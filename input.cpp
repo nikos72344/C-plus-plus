@@ -277,6 +277,6 @@ void ErrorMessage(unsigned int Error)
   case 8: cerr << "Wrong target syntax.\n"; exit(8);
   case 9: cerr << "Wrong command.\n"; exit(9);
   case 10: cerr << "Wrong target screen.\n"; exit(10);
-  default: cerr << "Unknow error.\n"; exit(-1);
+  default: cerr << "Unknown error.\n"; exit(-1);
   }
 }
