@@ -1,0 +1,40 @@
+SCREEN one
+BUTTON 1st
+lt 50 50
+rb 100 100
+color 0 255 0
+open SCREEN two
+dialog New screen?
+BUTTON 2nd
+lt 100 50
+rb 150 100
+color 0 191 255
+open SCREEN three
+SCREEN two
+BUTTON back
+lt 100 100
+rb 200 200
+color 255 255 0
+open SCREEN one
+BUTTON none
+lt 300 300
+rb 400 400
+color 0 128 128
+BUTTON Next
+lt 200 200
+rb 300 300
+color 255 69 0
+open SCREEN 4
+dialog You'll open another screen
+SCREEN three
+BUTTON back
+lt 100 100
+rb 150 150
+color 139, 0, 139
+open SCREEN one
+SCREEN 4
+BUTTON back
+lt 100 100
+rb 150 150
+color 255, 105, 180
+open SCREEN two
