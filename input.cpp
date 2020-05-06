@@ -1,7 +1,4 @@
 #include "input.h"
-#include "graphics.h"
-
-extern Manager Windows;
 
 Screen* tempScreen = 0;
 
@@ -107,18 +104,12 @@ bool NewScreen(vector<Line>::iterator curr, vector<Screen>& Screens, map<string,
     tempStr += ' ';
   }
   tempStr += curr->words[curr->words.size() - 1];
-  pair<string, unsigned int> data(tempStr, tempScreen->ID);
+  pair<string, unsigned int> data(tempStr, tempScreen->GetID());
   ScreenID.insert(data);
   return true;
 }
 
-void InscriptionPositionUpdate(void)
-{
-  tempButton->name.location.x = (tempButton->rightBottom.x - tempButton->leftTop.x - tempButton->name.length) / 2 + tempButton->leftTop.x;
-  tempButton->name.location.y = (-tempButton->leftTop.y + tempButton->rightBottom.y - tempButton->name.width) / 2 + tempButton->leftTop.y + tempButton->name.width;
-}
-
-bool NewButton(vector<Line>::iterator curr)
+bool NewButton(vector<Line>::iterator curr, Window* Main, Window* Dialog)
 {
   if (tempButton != 0)
   {
@@ -136,8 +127,9 @@ bool NewButton(vector<Line>::iterator curr)
     tempStr += ' ';
   }
   tempStr += curr->words[curr->words.size() - 1];
-  tempButton->name = tempStr;
-  InscriptionPositionUpdate();
+  tempButton->SetName(tempStr);
+  tempButton->NamePositionUpdate();
+  tempButton->SetWindowPointers(Main, Dialog);
   return true;
 }
 
@@ -147,8 +139,7 @@ bool SetLeftTopPosition(vector<Line>::iterator curr)
     return false;
   int x = atoi(curr->words[1].data());
   int y = atoi(curr->words[2].data());
-  tempButton->leftTop = { x, y };
-  InscriptionPositionUpdate();
+  tempButton->SetLeftTop({ x, y });
   return true;
 }
 
@@ -158,8 +149,7 @@ bool SetRightBottom(vector<Line>::iterator curr)
     return false;
   int x = atoi(curr->words[1].data());
   int y = atoi(curr->words[2].data());
-  tempButton->rightBottom = { x, y };
-  InscriptionPositionUpdate();
+  tempButton->SetRightBottom({ x, y });
   return true;
 }
 
@@ -170,7 +160,7 @@ bool SetColor(vector<Line>::iterator curr)
   GLdouble r = (GLdouble)atoi(curr->words[1].data());
   GLdouble g = (GLdouble)atoi(curr->words[2].data());
   GLdouble b = (GLdouble)atoi(curr->words[3].data());
-  tempButton->color = { r, g, b };
+  tempButton->SetColor({ r, g, b });
   return true;
 }
 
@@ -185,9 +175,9 @@ bool SetTarget(vector<Line>::iterator curr,  map<unsigned int, string>& ButtonID
     tempStr += ' ';
   }
   tempStr += curr->words[curr->words.size() - 1];
-  pair<unsigned int, string> data(tempButton->ID, tempStr);
+  pair<unsigned int, string> data(tempButton->GetID(), tempStr);
   ButtonID.insert(data);
-  tempButton->function = ShowScreen;
+  tempButton->SetFunction(ShowScreen);
   return true;
 }
 
@@ -200,7 +190,7 @@ void SetDialog(vector<Line>::iterator curr)
     tempStr += ' ';
   }
   tempStr += curr->words[curr->words.size() - 1];
-  tempButton->dialogMessage = tempStr;
+  tempButton->SetDialog(tempStr);
 }
 
 bool ButtonScreenLink(vector<Screen>& Screens, map<string, unsigned int>& ScreenID, map<unsigned int, string>& ButtonID)
@@ -208,13 +198,13 @@ bool ButtonScreenLink(vector<Screen>& Screens, map<string, unsigned int>& Screen
   for (vector<Screen>::iterator scrn = Screens.begin(); scrn != Screens.end(); scrn++)
     for (vector<Button>::iterator bttn = scrn->buttons.begin(); bttn != scrn->buttons.end(); bttn++)
     {
-      map<unsigned int, string>::iterator butScrn = ButtonID.find(bttn->ID);
+      map<unsigned int, string>::iterator butScrn = ButtonID.find(bttn->GetID());
       if (butScrn != ButtonID.end())
       {
         map<string, unsigned int>::iterator ScrnID = ScreenID.find(butScrn->second);
         if (ScrnID == ScreenID.end())
           return false;
-        bttn->targetID = ScrnID->second;
+        bttn->SetTarget(ScrnID->second);
       }
     }
   return true;
@@ -226,7 +216,7 @@ void FreeMemory(void)
   delete tempScreen;
 }
 
-unsigned int Code::Translator(void)
+unsigned int Code::Translator(Window& Input, Window& Dialog)
 {
   vector<Line>::iterator curr = CodeLines.begin();
   if (curr->words[0] != "SCREEN")
@@ -241,7 +231,7 @@ unsigned int Code::Translator(void)
     switch (GetCommand(command))
     {
     case 1: if (!NewScreen(curr, Screens, ScreenID)) { FreeMemory(); return 3; } break;
-    case 2: if (!NewButton(curr)) { FreeMemory(); return 4; } break;
+    case 2: if (!NewButton(curr, &Input, &Dialog)) { FreeMemory(); return 4; } break;
     case 3: if (!SetLeftTopPosition(curr)) { FreeMemory(); return 5; } break;
     case 4: if (!SetRightBottom(curr)) { FreeMemory(); return 6; } break;
     case 5: if (!SetColor(curr)) { FreeMemory(); return 7; } break;
@@ -258,7 +248,7 @@ unsigned int Code::Translator(void)
   if (!ButtonScreenLink(Screens, ScreenID, ButtonID))
     return 10;
   for (auto i : Screens)
-    Windows.main.AddScreen(i);
+    Input.AddScreen(i);
   return 0;
 }
 
