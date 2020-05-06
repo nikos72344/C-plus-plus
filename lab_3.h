@@ -1,6 +1,11 @@
 #ifndef __LAB_3
 #define __LAB_3
 
-void DialogScreenContent(string message, void(*yesFunc)(unsigned int ScreenID), unsigned int targetScreen, void(*noFunc)(unsigned int none));
+#include "graphics.h"
+#include "input.h"
+
+using namespace std;
+
+void ShowScreen(Window* main, Window* dialog, unsigned int Item);
 
 #endif

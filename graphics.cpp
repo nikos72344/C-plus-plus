@@ -1,18 +1,27 @@
 #include "graphics.h"
-#include "lab_3.h"
 
-extern Manager Windows;
-
-void ShowScreen(unsigned int ID)
+void DialogContent(Window* win, Window* mainWin, string message, void(*yesFunc)(Window* main, Window* dialog, unsigned int Item), unsigned int targetScreen, void(*noFunc)(Window* main, Window* dialog, unsigned int Item))
 {
-  Windows.main.SetCurrentScreen(ID);
+  int bWidth = 50;
+  Screen content;
+  Inscription temp(message);
+  int dy = (win->width - temp.Width() - bWidth) / 3;
+  int dx = (win->length - 2 * 2 * bWidth) / 3;
+  temp.SetLocation({ (win->length - temp.Length()) / 2, dy });
+  content.AddInscription(temp);
+  Button yes({ dx, 2 * dy + temp.Width() }, { dx + 2 * bWidth, 2 * dy + temp.Width() + bWidth }, { 105, 105, 105 }, "yes", yesFunc, targetScreen, "", win, mainWin);
+  Button no({ win->length - dx - 2 * bWidth, 2 * dy + temp.Width() }, { win->length - dx,2 * dy + temp.Width() + bWidth }, { 105,105, 105 }, "no", noFunc, targetScreen, "", win, mainWin);
+  content.AddButton(yes);
+  content.AddButton(no);
+  win->screens.clear();
+  win->AddScreen(content);
 }
 
 unsigned int CreateID(void)
 {
   static set<unsigned int> IDs;
   unsigned int ID;
-  set<unsigned int>::iterator res = IDs.end();
+  auto res = IDs.end();
   if (IDs.empty())
     IDs.insert(0);
   srand(time(0));
@@ -26,18 +35,7 @@ unsigned int CreateID(void)
   return ID;
 }
 
-void Manager::SetMain(Window& win)
-{
-  main = win;
-  workingWindow = main.ID;
-}
-
-void Manager::SetDialog(Window& win)
-{
-  dialog = win;
-}
-
-Window::Window(const char Name[], int len, int wid, point pos, unsigned int id)
+Window::Window(string Name, int len, int wid, point pos, unsigned int id, WindowType tpe)
 {
   name = Name;
   position = pos;
@@ -45,6 +43,7 @@ Window::Window(const char Name[], int len, int wid, point pos, unsigned int id)
   width = wid;
   ID = id;
   currentScreen = 0;
+  type = tpe;
 
   glClearColor(1.0, 1.0, 1.0, 1.0);
   glMatrixMode(GL_PROJECTION);
@@ -93,26 +92,30 @@ void Window::AddScreen(Screen scrn)
 {
   screens.push_back(scrn);
   if (screens.size() == 1)
-    currentScreen = scrn.ID;
+    currentScreen = scrn.GetID();
 }
 
 bool Window::SetCurrentScreen(unsigned int ID)
 {
   for (auto i : screens)
-    if (ID == i.ID)
+    if (ID == i.GetID())
     {
-      currentScreen = i.ID;
+      currentScreen = i.GetID();
       return true;
     }
   return false;
 }
 
-vector<Screen>::iterator Window::GetCurrentScreen(void)
+Screen& Window::GetCurrentScreen(void)
 {
-  for (vector<Screen>::iterator i =screens.begin(); i!=screens.end(); i++)
-    if (currentScreen == i->ID)
-      return i;
-  return screens.end();
+  int i = 0;
+  for (auto scrn : screens)
+  {
+    if (currentScreen == scrn.GetID())
+      return screens[i];
+    i++;
+  }
+  return *screens.begin();
 }
 
 Inscription::Inscription(string cntnt, point loc, GlutRGB clor) : content(cntnt), location(loc), color(clor)
@@ -135,14 +138,15 @@ void Inscription::Draw(void)
   glEnd();
 }
 
-Button::Button(point Ltop, point rBttm, GlutRGB clor, const char nme[], void(*func)(unsigned int ScreenID), unsigned int targetScreen, string dialMessge) : leftTop(Ltop), rightBottom(rBttm), color(clor), dialogMessage(dialMessge), function(func), targetID(targetScreen)
+Button::Button(point Ltop, point rBttm, GlutRGB clor, const char nme[], void(*func)(Window* main, Window* dialog, unsigned int ScreenID), unsigned int targetScreen, string dialMessge, Window* dialogWindw, Window* mainWindw) : leftTop(Ltop), rightBottom(rBttm), color(clor), dialogMessage(dialMessge), function(func), targetID(targetScreen), dialogWindow(dialogWindw), mainWindow(mainWindw)
 {
   ID = CreateID();
   onOFF = 127 / 255.0;
   string str = nme;
   Inscription temp(nme, { 0, 0 }, { 0, 0, 0 });
-  temp.location.x = (rightBottom.x - leftTop.x - temp.length) / 2 + leftTop.x;
-  temp.location.y = (-leftTop.y + rightBottom.y - temp.width) / 2 + leftTop.y + temp.width;
+  int x = (rightBottom.x - leftTop.x - temp.Length()) / 2 + leftTop.x;
+  int y = (-leftTop.y + rightBottom.y - temp.Width()) / 2 + leftTop.y + temp.Width();
+  temp.SetLocation({ x, y });
   name = temp;
 }
 
@@ -169,9 +173,9 @@ bool Button::MousePosition(point pos)
 void Button::FontColor(point pos)
 {
   if (MousePosition(pos))
-    name.color = { 255, 255, 255 };
+    name.SetColor({ 255, 255, 255 });
   else
-    name.color = { 0,0,0 };
+    name.SetColor({ 0,0,0 });
 }
 
 void Button::Click (int button, int state, point pos)
@@ -181,8 +185,8 @@ void Button::Click (int button, int state, point pos)
   if (MousePosition(pos) && button == GLUT_LEFT_BUTTON && state == GLUT_UP)
   {
     onOFF *= -1;
-    if (DialogWindow())
-      function(targetID);
+    if (DialogWindow() && function != 0)
+      function(mainWindow, dialogWindow, targetID);
   }
 }
 
@@ -192,30 +196,24 @@ void Button::onOFFUpdate(point pos)
     onOFF *= -1;
 }
 
-void noFunc(unsigned int Item)
+void noFunc(Window* main, Window* dialog, unsigned int Item)
 {
-  Windows.dialog.HideWindow();
-  Windows.workingWindow = Windows.main.ID;
+  dialog->HideWindow();
+  main->SetWindow();
 }
 
-void (*inputFunction)(unsigned int ID) = 0;
-
-void yesFunc(unsigned int Item)
+void yesFunc(Window* main, Window* dialog, unsigned int Item)
 {
-  noFunc(0);
-  if (inputFunction != 0)
-    inputFunction(Item);
-  inputFunction = 0;
+  noFunc(main, dialog, Item);
+  main->SetCurrentScreen(Item);
 }
 
 bool Button::DialogWindow(void)
 {
   if (dialogMessage == "")
     return true;
-  inputFunction = function;
-  DialogScreenContent(dialogMessage, yesFunc, targetID, noFunc);
-  Windows.dialog.ShowWindow();
-  Windows.workingWindow = Windows.dialog.ID;
+  DialogContent(dialogWindow, mainWindow, dialogMessage, yesFunc, targetID, noFunc);
+  dialogWindow->ShowWindow();
   return false;
 }
 
@@ -232,4 +230,46 @@ void Screen::AddButton(Button but)
 void Screen::AddInscription(Inscription inscrpt)
 {
   inscriptors.push_back(inscrpt);
+}
+
+void Button::NamePositionUpdate(void)
+{
+  int x = (rightBottom.x - leftTop.x - name.Length()) / 2 + leftTop.x;
+  int y = (-leftTop.y + rightBottom.y - name.Width()) / 2 + leftTop.y + name.Width();
+  name.SetLocation({ x, y });
+}
+
+void Window::Draw(void)
+{
+  glClear(GL_COLOR_BUFFER_BIT);
+  switch (type)
+  {
+  case mainWin: SetBackground({ 123, 104, 238 }, { 123, 104, 238 }, { 176, 196, 222 }, { 176, 196, 222 }); break;
+  case dialogWin: SetBackground({ 211, 211, 211 }, { 211, 211, 211 }, { 211, 211, 211 }, { 211, 211, 211 }); break;
+  }
+  Screen& current = GetCurrentScreen();
+  for (auto button : current.buttons)
+    button.Draw();
+  for (auto inscrptr : current.inscriptors)
+    inscrptr.Draw();
+  glutSwapBuffers();
+}
+
+void Window::Mouse(int button, int state, int x, int y)
+{
+  Screen& current = GetCurrentScreen();
+  for (vector<Button>::iterator i = current.buttons.begin(); i != current.buttons.end(); i++)
+    i->Click(button, state, { x, y });
+  glutPostRedisplay();
+}
+
+void Window::PassiveMouse(int x, int y)
+{
+  Screen& current = GetCurrentScreen();
+  for (vector<Button>::iterator i = current.buttons.begin(); i != current.buttons.end(); i++)
+  {
+    i->FontColor({ x, y });
+    i->onOFFUpdate({ x, y });
+  }
+  glutPostRedisplay();
 }
