@@ -1,14 +1,28 @@
-#ifndef __GRAPHICS_H
-#define __GRAPHICS_H
+#ifndef __GRAPHICS
+#define __GRAPHICS
 
-#include <ctime>
-#include <iostream>
-#include <set>
+#include "input.h"
+#include <gl/glut.h>
 #include <string>
 #include <vector>
-#include <gl/glut.h>
+#define LENGTH 30
+#define WIDTH 10
 
 using namespace std;
+
+const double PI = 3.1415926535897932384626433832795;
+
+struct point
+{
+  int x, y;
+};
+
+enum bonusType
+{
+  none,
+  newBall,
+  extension
+};
 
 class GlutRGB
 {
@@ -17,27 +31,15 @@ public:
   GlutRGB(GLdouble r = 0, GLdouble g = 0, GLdouble b = 0) : red(r / 255.0), green(g / 255.0), blue(b / 255.0) {}
 };
 
-struct point
-{
-  int x, y;
-};
-
-enum WindowType
-{
-  mainWin,
-  dialogWin
-};
-
-class Inscription
+class Title
 {
 private:
-  unsigned int ID;
   point location;
   int length, width;
   GlutRGB color;
   string content;
 public:
-  Inscription(string cntnt = "", point loc = { 0, 0 }, GlutRGB clor = { 0, 0, 0 });
+  Title(string cntnt = "", point loc = { 0, 0 }, GlutRGB clor = { 0, 0, 0 });
   void SetLocation(point newLoc) { location = newLoc; }
   void SetColor(GlutRGB newColor) { color = newColor; }
   int Length(void) { return length; }
@@ -45,79 +47,127 @@ public:
   void Draw(void);
 };
 
-class Window;
+class Object
+{
+protected:
+  point location;
+  double angle;
+  double speed;
+  GlutRGB up, bottom;
+public:
+  Object(point Loc, double Angle, GlutRGB Up, GlutRGB Bottom) : location(Loc), angle(Angle), speed(0), up(Up), bottom(Bottom) {}
+  point Location(void) { return location; }
+  double Angle(void) { return angle; }
+  double Speed(void) { return speed; }
+  void Calculations(vector<point> Dots);
+  virtual void Draw(void) = 0;
+};
 
-class Button
+class Bonus;
+
+class Platform : public Object
 {
 private:
-  unsigned int ID;
-  point leftTop, rightBottom;
-  GlutRGB color;
-  GLdouble onOFF;
-  Inscription name;
-  void (*function)(Window* main, Window* dialog, unsigned int Item);
-  unsigned int targetID;
-  string dialogMessage;
-  Window* dialogWindow;
-  Window* mainWindow;
+  int length, width;
 public:
-  Button(point Ltop = { 0, 0 }, point rBttm = { 50, 50 }, GlutRGB clor = { 0, 0, 0 }, const char nme[] = "", void(*func)(Window* main, Window* dialog, unsigned int ScreenID) = 0, unsigned int targetScreen = 0, string dialMessge = "", Window* dialogWind = 0, Window* mainWind = 0);
+  Platform(point Loc = { 0, 0 }, double Angle = PI / 2, GlutRGB Up = { 0.0, 0.0, 0.0 }, GlutRGB Bottom = { 0.0, 0.0, 0.0 }, int Len = LENGTH, int Wid = WIDTH) : Object(Loc, Angle, Up, Bottom), length(Len), width(Wid) {}
+  void SetSpeed(double Speed) { speed = Speed; }
+  void SetLocation(point Loc) { location = Loc; }
+  void SetAngle(double Angle) { angle = Angle; }
   void Draw(void);
-  bool MousePosition(point pos);
-  void FontColor(point pos);
-  void Click(int button, int state, point pos);
-  void onOFFUpdate(point pos);
-  bool DialogWindow(void);
-  void NamePositionUpdate(void);
-  void SetLeftTop(point newPos) { leftTop = newPos; this->NamePositionUpdate(); }
-  void SetRightBottom(point newPos) { rightBottom = newPos; this->NamePositionUpdate(); }
-  void SetName(Inscription newName) { name = newName; }
-  void SetColor(GlutRGB newColor) { color = newColor; }
-  void SetWindowPointers(Window* mn, Window* dlg) { mainWindow = mn; dialogWindow = dlg; }
-  void SetDialog(string dialog) { dialogMessage = dialog; }
-  void SetTarget(unsigned int target) { targetID = target; }
-  void SetFunction(void (*func)(Window* main, Window* dialog, unsigned int Item)) { function = func; }
-  unsigned int GetID(void) { return ID; }
+  friend Bonus;
+};
+
+class Ball : public Object
+{
+private:
+  double radius;
+public:
+  Ball(point Loc = { 0, 0 }, double Angle = PI / 2, GlutRGB Up = { 0, 0, 0 }, GlutRGB Bottom = { 0, 0, 0 }, double Radius = 5) : Object(Loc, Angle, Up, Bottom), radius(Radius) {}
+  void SetSpeed(double Speed) { speed = Speed; }
+  void SetLocation(point Loc) { location = Loc; }
+  void SetAngle(double Angle) { angle = Angle; }
+  void Draw(void);
+};
+
+class Bonus : public Object
+{
+protected:
+  bonusType type;
+public:
+  Bonus(point Loc = { 0, 0 }, double Angle = -PI / 2, GlutRGB Up = { 0, 0, 0 }, GlutRGB Bottom = { 0, 0, 0 }, bonusType Type = none) : Object(Loc, Angle, Up, Bottom), type(Type) {}
+  virtual int ApplyBonus(void) = 0;
+  void SetSpeed(double Speed) { speed = Speed; }
+  void SetLocation(point Loc) { location = Loc; }
+  void SetAngle(double Angle) { angle = Angle; }
+  void Draw(void);
+};
+
+class Level;
+
+class NewBall : public Bonus
+{
+public:
+  NewBall(point Loc = { 0,0 }, double Angle = -PI / 2, GlutRGB Up = { 0,0,0 }, GlutRGB Bottom = { 0, 0, 0 }) : Bonus(Loc, Angle, Up, Bottom, newBall) {}
+  void ApplyBonus(Level& Lvl) {}
+};
+
+class Extension : public Bonus
+{
+public:
+  Extension(point Loc = { 0,0 }, double Angle = -PI / 2, GlutRGB Up = { 0,0,0 }, GlutRGB Bottom = { 0, 0, 0 }) : Bonus(Loc, Angle, Up, Bottom, extension) {}
+  void ApplyBonus(Platform& Pltfrm) {}
+};
+
+class Brick : public Object
+{
+private:
+  int length, width;
+  int durability;
+  Bonus* bonus;
+public:
+  Brick(point Loc = { 0,0 }, double Angle = PI / 2, GlutRGB Up = { 0, 0, 0 }, GlutRGB Bottom = { 0, 0, 0 }, int Len = LENGTH, int Wid = WIDTH, int Durblty = 1, Bonus* Bnus = 0) : Object(Loc, Angle, Up, Bottom), length(Len), width(Wid), durability(Durblty), bonus(Bnus) {}
+  void SetBonus(Bonus* bns) { bonus = bns; }
+};
+
+class Screen;
+
+class Input;
+
+class Level
+{
+private:
+  vector<Brick> bricks;
+  int rows;
+  vector<Platform> platform;
+  vector<Ball> balls;
+public:
+  Level(void) : rows(0) {}
+  friend Screen;
+  friend Input;
+  friend Bonus;
 };
 
 class Screen
 {
 private:
-  unsigned int ID;
+  int winLength, winWidth;
+  vector<Level> levels;
+  int currentLevel;
+  Level GameOver;
 public:
-  vector<Inscription> inscriptors;
-  vector<Button> buttons;
-  Screen();
-  void AddButton(Button but);
-  void AddInscription(Inscription inscrpt);
-  unsigned int GetID(void) { return ID; }
-};
-
-class Window
-{
-private:
-  unsigned int ID;
-  int length, width;
-  WindowType type;
-  point position;
-  string name;
-  GlutRGB leftTop, rightTop, rightBottom, leftBottom;
-  vector<Screen> screens;
-  unsigned int currentScreen;
-public:
-  Window(string Name = "Window", int len = 500, int  wid = 500, point Pos = { 50, 50 }, unsigned int id = 0, WindowType tpe = mainWin);
-  void SetBackground(GlutRGB lTop, GlutRGB  rTop, GlutRGB  rBttm, GlutRGB lBttm);
-  void SetWindow(void);
-  void ShowWindow(void);
-  void HideWindow(void);
-  void AddScreen(Screen scrn);
-  bool SetCurrentScreen(unsigned int ID);
-  Screen& GetCurrentScreen(void);
-  void Draw(void);
+  Screen(int wLength, int wWidth) : winLength(wLength), winWidth(wWidth), currentLevel(-1) {}
+  void Display(void);
   void Mouse(int button, int state, int x, int y);
   void PassiveMouse(int x, int y);
-  unsigned int GetID(void) { return ID; }
-  friend void DialogContent(Window* win, Window* mainWin, string message, void(*yesFunc)(Window* main, Window* dialog, unsigned int Item), unsigned int targetScreen, void(*noFunc)(Window* main, Window* dialog, unsigned int Item));
+  void Keyboard(unsigned char key, int x, int y);
+  void SpecialKeyboard(int key, int x, int y);
+  void PositionUpdate(Object* obj);
+  bool IsBump(Object& One, Object& Two);
+  void DataUpdate(void);
+  int WinLength(void) { return winLength; }
+  int WinWidth(void) { return winWidth; }
+  friend Input;
 };
 
 #endif

@@ -2,16 +2,10 @@
 #define __INPUT_H
 
 #include "graphics.h"
-#include "lab_3.h"
-#include <fstream>
-#include <iostream>
 #include <string>
 #include <vector>
-#include <map>
 
 using namespace std;
-
-void ErrorMessage(unsigned int Error);
 
 class Line
 {
@@ -21,14 +15,16 @@ public:
   Line& operator+=(string& str);
 };
 
-class Code
+class Screen;
+
+class Input
 {
 private:
   vector<Line> CodeLines;
 public:
-  Code& operator+=(string& str);
+  Input& operator+=(string& str);
   bool ReadFile(const char* File_Name);
-  unsigned int Translator(Window& Input, Window& Dialog);
+  unsigned int Translator(Screen& Main);
 };
 
 #endif
